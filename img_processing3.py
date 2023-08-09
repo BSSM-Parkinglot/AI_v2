@@ -1,3 +1,4 @@
+from threading import Thread
 import cv2
 import os
 import requests
@@ -12,6 +13,7 @@ cap = cv2.VideoCapture(0)
 api_url = 'https://jxipvnd5gr.apigw.ntruss.com/custom/v1/23940/23d399aece734a838e4a57babf9b53de95e487b0011119e00a8269b3e7fca1ad/general'
 secret_key = 'RGl2dlRmaFZrZ0ZPQWVCR2ZUZW5UTE5hYkJhbFRhY0c='
 image_file = './saved_frames/frame.png'
+result = []
 
 def extract_license_plate(text):
     # 정규 표현식 패턴
@@ -24,7 +26,9 @@ def extract_license_plate(text):
         return ""
     return license_plates[0]
 
-def api_request():
+def api_request(image_file):
+    global result
+
     request_json = {
       'images': [
           {
@@ -45,9 +49,10 @@ def api_request():
       'X-OCR-SECRET': secret_key
     }
 
-    response = requests.request("POST", api_url, headers=headers, data = payload, files = files)
+    response = requests.request("POST", api_url, headers=headers, data=payload, files=files)
 
-    return response.json()
+    result = response.json()
+    return 
 
 # 이미지 파일을 저장할 디렉토리 생성 (디렉토리가 없는 경우에만)
 output_dir = 'saved_frames'
@@ -65,7 +70,11 @@ while True:
     # 이미지 파일 저장
     cv2.imwrite(os.path.join(output_dir, 'frame.png'), frame)
 
-    result = api_request()
+    th = Thread(target=api_request, args=(image_file))
+    th.start()
+    th.join()
+
+    
     with open('result.json', 'w', encoding='utf-8') as make_file:
         json.dump(result, make_file, indent="\t")
 
